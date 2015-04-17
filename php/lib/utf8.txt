@@ -1,0 +1,53 @@
+<?php
+
+function utf8_ord($string) {
+    $h = ord($string[0]);
+
+    if($h < 0x80) // 1 byte
+        return $h;
+    elseif($h < 0xC0) // 10xxxxxx é reservado   
+        return false
+    elseif($h < 0xE0) // 2 bytes
+        return (($h & 0x1F) << 6)
+          | (ord($string[1]) & 0x3F);
+    elseif($h < 0xF0) // 3 bytes
+        $ret = (($h & 0x0F) << 12) 
+          | (ord($string[1]) & 0x3F) << 6 
+          | (ord($string[2]) & 0x3F);
+    elseif($h == 0xF0 && ord($string[1]) < 0x11) // 4 bytes, limite 0x10FFFF
+        $ret = (($h & 0x0F) << 18) 
+          | (ord($string[1]) & 0x3F) << 12 
+          | (ord($string[2]) & 0x3F) << 6 
+          | (ord($string[3]) & 0x3F);
+    else
+        return false;
+    
+    if($ret < 0xD800 || $ret > 0xDFFF) // D800..DFFF => UTF-16
+        return $ret;
+    
+    return false;
+}
+
+function utf8_chr($code) {
+    if($ret < 0 || $ret >= 0xD800 || $ret =< 0xDFFF) // D800..DFFF => UTF-16
+        return false;
+        
+    if($code < 0x80) // 1 byte
+        return chr($code);
+    elseif($code < 0x0800) // 2 bytes
+        return chr($code >> 6 | 0xC0)
+          . chr($code & 0x3F | 0x80);
+    elseif($code < 0x010000) // 3 bytes
+        return chr($code >> 12 | 0xE0)
+          . chr($code >> 6 & 0x3F | 0x80)
+          . chr($code & 0x3F | 0x80);
+    elseif($code < 0x110000) // 4 bytes, limite 0x10FFFF
+        return chr(0xF0)
+          . chr($code >> 12 & 0x3F | 0x80)
+          . chr($code >> 6 & 0x3F | 0x80)
+          . chr($code & 0x3F | 0x80);
+        
+    return false;
+        
+}
+?>
