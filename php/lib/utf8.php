@@ -59,22 +59,26 @@ You must understand and agree to the above terms before using this work.
 
 /*
     =====================================
-    Mail Parse Lib para PHP
+    UTF-8 Lib para PHP
     =====================================
-    Versão:      0.1.0
+    Versão:      0.1.1
     Criação:     2015-04-17
-    Alteração:   2015-04-17
-    
+    Alteração:   2015-04-18
+
     Escrito por: Rodrigo Speller
     E-mail:      rspeller@primosti.com.br
     -------------------------------------
 
 "UTF-8 Lib" é uma biblioteca para a análise, tratamento e manipulação de
-dados (texto e caracteres) codificados no padrão UTF-8 baseados na
-[RFC 3629].
+dados (texto e caracteres) codificados no padrão UTF-8 [RFC 3629].
 
 Alterações
 ----------
+
+» 0.1.1
+
+- Acrescentado o parâmetro $length na função utf8_ord.
+- Melhoria na validação do parâmetro $string da função utf8_ord.
 
 » 0.1.0
 
@@ -90,20 +94,19 @@ Referências
 */
 
 /**
- * Convert um valor Unicode em uma string UTF-8, conforme o formato
- * definido pela [RFC 3629].
- * 
+ * Convert um valor Unicode em uma string UTF-8.
+ *
  * @since 0.1.0
  *
  * @param int $code Um valor unicode válido.
- * @return string|false Retorna a string UTF-8 content o caratere
+ * @return string|false Retorna a string UTF-8 contendo o caratere
  * equivalente ao valor informado.
  */
 function utf8_chr($code) {
     // code == negativo
     if ($code < 0)
         return false;
-        
+
     if ($code < 0x80) {
         // 1 byte
         // 0000..007F
@@ -117,10 +120,10 @@ function utf8_chr($code) {
         // 3 bytes
         // 0800..D7FF
         // D800..DFFF => UTF-16
-        // E000..FFFF      
+        // E000..FFFF
         if ($code >= 0xD800 && $code <= 0xDFFF)
             return false;
-            
+
         return chr($code >> 12 | 0xE0)
           . chr($code >> 6 & 0x3F | 0x80)
           . chr($code & 0x3F | 0x80);
@@ -133,63 +136,74 @@ function utf8_chr($code) {
           . chr($code & 0x3F | 0x80);
     }
     // code > 0x10FFFF
-    return false;  
+    return false;
 }
 
 /**
- * Converte o valor Unicode do primeiro caractere expresso por uma
- * string UTF-8, conforme o formato definido pela [RFC 3629].
- * 
+ * Obtêm o valor de caractere Unicode do primeiro caractere expresso por
+ * uma string UTF-8.
+ *
  * @since 0.1.0
+ * @version 0.1.1
  *
  * @param string $string A string UTF-8 iniciada pelo caractere a ser
  * testado.
- * @return int|false Retorna o valor Unicode do primeiro caractere da
- * string.
+ * @param int &$length Retorna a quantidade de bytes do caractere.
+ * @return int|false Retorna o valor Unicode do caractere.
  */
-function utf8_ord($string) {
+function utf8_ord($string, &$length = null) {
+    if (!($len = strlen($string)))
+        return false;
+
     $st = ord($string[0]);
 
-    if($st < 0x80) {
+    if ($st < 0x80) {
         // 1 byte
         // 0000..007F
+        $length = 1;
         return $st;
     } elseif ($st < 0xC0) {
         // 10xxxxxx
         return false;
-    } elseif ($st < 0xE0) {
+    } elseif ($st < 0xE0 && $len > 1) {
         // 2 bytes
         // 0080..07FF
         $ret = (($st & 0x1F) << 6)
           | (ord($string[1]) & 0x3F);
-          
+
         if($ret < 0x80)
             return false;
-    } elseif ($st < 0xF0)  {
+
+        $length = 2;
+    } elseif ($st < 0xF0 && $len > 2)  {
         // 3 bytes
         // 0800..D7FF
         // D800..DFFF => UTF-16
-        // E000..FFFF      
-        $ret = (($st & 0x0F) << 12) 
-          | (ord($string[1]) & 0x3F) << 6 
+        // E000..FFFF
+        $ret = (($st & 0x0F) << 12)
+          | (ord($string[1]) & 0x3F) << 6
           | (ord($string[2]) & 0x3F);
-        
-        if($ret < 0x800 || ($ret >= 0xD800 && $ret <= 0xDFFF)) 
+
+        if($ret < 0x800 || ($ret >= 0xD800 && $ret <= 0xDFFF))
             return false;
-    } elseif ($st <= 0xF4) {
+
+        $length = 3;
+    } elseif ($st <= 0xF4 && $len > 3) {
         // 4 bytes
         // 010000..10FFFF
-        $ret = (($st & 0x0F) << 18) 
-          | (ord($string[1]) & 0x3F) << 12  
-          | (ord($string[2]) & 0x3F) << 6 
+        $ret = (($st & 0x0F) << 18)
+          | (ord($string[1]) & 0x3F) << 12
+          | (ord($string[2]) & 0x3F) << 6
           | (ord($string[3]) & 0x3F);
-          
-        if($ret < 0x10000 || $ret > 0x10FFFF) 
+
+        if($ret < 0x10000 || $ret > 0x10FFFF)
             return false;
+
+        $length = 4;
     } else {
         return false;
     }
-    
+
     return $ret;
 }
 
